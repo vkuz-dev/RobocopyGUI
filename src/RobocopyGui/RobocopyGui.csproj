@@ -1,0 +1,53 @@
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+
+  <PropertyGroup>
+    <TargetFramework>net462-windows</TargetFramework>
+    <LangVersion>latestMajor</LangVersion>
+
+    <UseWindowsForms>true</UseWindowsForms>
+    <OutputType>WinExe</OutputType>
+
+    <Product>RobocopyGUI</Product>
+    <Copyright>© 2026 Vladimir Kuznetsov</Copyright>
+
+    <Company>Vladimir Kuznetsov</Company>
+    <Authors>Vladimir Kuznetsov</Authors>
+    <Description>A GUI wrapper for robocopy.exe</Description>
+    <PackageProjectUrl>https://github.com/vkuz-dev/RobocopyGUI</PackageProjectUrl>
+
+    <AssemblyName>RobocopyGUI</AssemblyName>
+    <AssemblyTitle>RobocopyGUI</AssemblyTitle>
+
+    <RootNamespace>RobocopyGUI</RootNamespace>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+
+    <!-- VERSIONING -->
+    <Version>1.0.0.0</Version>
+    <AssemblyVersion>$(Version)</AssemblyVersion>
+    <FileVersion>$(Version)</FileVersion>
+    <InformationalVersion>$(Version)</InformationalVersion>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+
+    <!-- BUILD -->
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+
+    <ApplicationIcon>app.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="app.ico" LogicalName="RobocopyGui.app.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Web.Extensions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="RobocopyGui.Tests" />
+  </ItemGroup>
+
+</Project>
