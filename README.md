@@ -2,6 +2,9 @@
 
 A simple GUI wrapper for people who use `robocopy.exe`. I wanted something like this for a long time, but the projects I tried were never quite what I wanted.
 
+
+<img width="1062" height="974" alt="image" src="https://github.com/user-attachments/assets/955f4612-6577-433f-9959-fd50b54d8ca5" />
+
 Pick a source and destination, choose what to copy, review the generated command, and hit **Start**. You still get the full power of Robocopy, without having to build the command by hand.
 
 ### What it solves
