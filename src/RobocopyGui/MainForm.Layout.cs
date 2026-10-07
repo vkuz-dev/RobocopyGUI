@@ -1,3 +1,4 @@
+using System;
 using System.ComponentModel;
 using System.Drawing;
 using System.Windows.Forms;
@@ -8,11 +9,15 @@ namespace RobocopyGui
     /// <summary>Control construction and layout. Behaviour lives in MainForm.cs and MainForm.Execution.cs.</summary>
     internal partial class MainForm
     {
+        /// <summary>Output lines kept visible below the configuration.</summary>
+        private const int OutputLines = 8;
+
         private readonly Container components = new Container();
 
         private SplitContainer split;
         private TableLayoutPanel configTable;
         private TableLayoutPanel executionHeader;
+        private Control executionPanel;
         private ToolTip toolTip;
         private NotifyIcon trayIcon;
         private Timer scheduleTimer;
@@ -86,12 +91,8 @@ namespace RobocopyGui
         private void BuildLayout()
         {
             SuspendLayout();
-            AutoScaleDimensions = new SizeF(96F, 96F);
-            AutoScaleMode = AutoScaleMode.Dpi;
             Font = SystemFonts.MessageBoxFont;
             Text = "Robocopy GUI";
-            ClientSize = new Size(1060, 940);
-            MinimumSize = new Size(860, 640);
             StartPosition = FormStartPosition.CenterScreen;
 
             toolTip = new ToolTip(components) { AutoPopDelay = 20000, InitialDelay = 400 };
@@ -103,7 +104,7 @@ namespace RobocopyGui
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 ColumnCount = 2,
                 RowCount = 4,
-                Padding = new Padding(8, 8, 8, 0),
+                Padding = Pad(3, 3, 3, 0),
             };
             configTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
             configTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
@@ -130,11 +131,24 @@ namespace RobocopyGui
                 Dock = DockStyle.Fill,
                 Orientation = Orientation.Horizontal,
                 FixedPanel = FixedPanel.Panel1,
-                SplitterWidth = 6,
             };
+            executionPanel = BuildExecutionPanel();
             split.Panel1.Controls.Add(configPanel);
-            split.Panel2.Controls.Add(BuildExecutionPanel());
+            split.Panel2.Controls.Add(executionPanel);
             Controls.Add(split);
+
+            // Boxes that don't size their own width, measured now that they have the form's font.
+            Sizing.FitWidth(cboFolderMode, true, "Include selected", "Exclude selected");
+            Sizing.FitWidth(numThreads, true, numThreads.Maximum.ToString());
+            Sizing.FitWidth(numRetries, true, numRetries.Maximum.ToString());
+            Sizing.FitWidth(numWait, true, numWait.Maximum.ToString());
+            Sizing.FitWidth(txtCopyFlags, false, "DATSOUX");
+            Sizing.FitWidth(txtDirCopyFlags, false, "DATSOUX");
+            string widestTime = DateTime.Today.AddHours(23).AddMinutes(58).ToString(dtpStart.CustomFormat);
+            Sizing.FitWidth(dtpStart, true, widestTime);
+            Sizing.FitWidth(dtpStop, true, widestTime);
+            txtOutput.Height = Sizing.LinesHeight(txtOutput.Font, OutputLines);
+            txtOutput.MinimumSize = new Size(0, txtOutput.Height);
 
             // Names for screen readers (labels in a TableLayoutPanel are not associated automatically).
             txtSource.AccessibleName = "Source";
@@ -161,16 +175,16 @@ namespace RobocopyGui
 
         private Control BuildPathPanel(string caption, out TextBox box, out Button browse)
         {
-            var panel = NewTable(2, new Padding(3, 0, 3, 6));
+            var panel = NewTable(2, Pad(1, 0, 1, 2));
             panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             panel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
 
-            var label = new Label { Text = caption, AutoSize = true, Font = new Font(Font, FontStyle.Bold), Margin = new Padding(0, 0, 0, 3) };
+            var label = new Label { Text = caption, AutoSize = true, Font = new Font(Font, FontStyle.Bold), Margin = Pad(0, 0, 0, 1) };
             panel.Controls.Add(label, 0, 0);
             panel.SetColumnSpan(label, 2);
 
-            box = new TextBox { Anchor = AnchorStyles.Left | AnchorStyles.Right, Margin = new Padding(0, 0, 6, 0) };
-            browse = new Button { Text = "Browse…", AutoSize = true, Margin = new Padding(0) };
+            box = new TextBox { Anchor = AnchorStyles.Left | AnchorStyles.Right, Margin = Pad(0, 0, 2, 0) };
+            browse = new Button { Text = "Browse…", AutoSize = true, Margin = Padding.Empty };
             panel.Controls.Add(box, 0, 1);
             panel.Controls.Add(browse, 1, 1);
             toolTip.SetToolTip(box, "Local path or UNC path (\\\\server\\share\\folder).");
@@ -179,9 +193,9 @@ namespace RobocopyGui
 
         private Control BuildFoldersGroup()
         {
+            // Not auto-sized: the group takes the height of the parameters group next to it.
             grpFolders = NewGroup("Source folders");
             grpFolders.Dock = DockStyle.Fill;
-            grpFolders.Height = 250;
 
             var table = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 6, RowCount = 3 };
             table.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
@@ -194,10 +208,10 @@ namespace RobocopyGui
             table.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
-            cboFolderMode = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 150, Anchor = AnchorStyles.Left };
+            cboFolderMode = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Anchor = AnchorStyles.Left };
             cboFolderMode.Items.AddRange(new object[] { "Include selected", "Exclude selected" });
-            btnSelectAll = new Button { Text = "All", AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, MinimumSize = new Size(44, 0) };
-            btnSelectNone = new Button { Text = "None", AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, MinimumSize = new Size(44, 0) };
+            btnSelectAll = new Button { Text = "All", AutoSize = true };
+            btnSelectNone = new Button { Text = "None", AutoSize = true };
             btnRefreshFolders = new Button { Text = "Refresh", AutoSize = true };
 
             table.Controls.Add(new Label { Text = "Folder mode:", AutoSize = true, Anchor = AnchorStyles.Left }, 0, 0);
@@ -232,7 +246,6 @@ namespace RobocopyGui
             grpParameters.AutoSizeMode = AutoSizeMode.GrowAndShrink;
 
             var table = NewTable(1, Padding.Empty);
-            table.Dock = DockStyle.Fill;
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
             chkMirror = NewCheck("Mirror (/MIR)", "Mirror the source tree: copies subfolders including empty ones and deletes destination files and folders that no longer exist in the source.");
@@ -241,14 +254,16 @@ namespace RobocopyGui
             chkDryRun = NewCheck("Dry run (/L)", "Robocopy only lists what it would do. Nothing is copied, deleted or time-stamped.");
 
             chkMultithread = NewCheck("Multithreaded (/MT)", "Copy with multiple threads. Robocopy accepts 1–128; without a number it uses 8.");
-            chkMultithread.Margin = new Padding(3, 5, 3, 3);
-            numThreads = new NumericUpDown { Minimum = 1, Maximum = 128, Value = 16, Width = 60, Margin = new Padding(3, 3, 3, 3) };
-            var threadRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = Padding.Empty };
-            threadRow.Controls.Add(chkMultithread);
-            threadRow.Controls.Add(new Label { Text = "Threads:", AutoSize = true, Margin = new Padding(12, 7, 0, 0) });
-            threadRow.Controls.Add(numThreads);
+            chkMultithread.Anchor = AnchorStyles.Left;
+            numThreads = new NumericUpDown { Minimum = 1, Maximum = 128, Value = 16, Anchor = AnchorStyles.Left };
+            var threadRow = NewTable(3, Padding.Empty);
+            for (int i = 0; i < threadRow.ColumnCount; i++)
+                threadRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            threadRow.Controls.Add(chkMultithread, 0, 0);
+            threadRow.Controls.Add(new Label { Text = "Threads:", AutoSize = true, Anchor = AnchorStyles.Left, Margin = Pad(4, 0, 0, 0) }, 1, 0);
+            threadRow.Controls.Add(numThreads, 2, 0);
 
-            btnAdvanced = new Button { Text = "Advanced ▾", AutoSize = true, Margin = new Padding(3, 8, 3, 3) };
+            btnAdvanced = new Button { Text = "Advanced ▾", AutoSize = true, Anchor = AnchorStyles.Left, Margin = Pad(1, 3, 1, 1) };
 
             table.Controls.Add(chkMirror);
             table.Controls.Add(chkSecurity);
@@ -264,8 +279,7 @@ namespace RobocopyGui
 
         private Control BuildAdvancedPanel()
         {
-            pnlAdvanced = NewTable(4, new Padding(0, 6, 0, 0));
-            pnlAdvanced.Dock = DockStyle.Fill;
+            pnlAdvanced = NewTable(4, Pad(0, 2, 0, 0));
             pnlAdvanced.Visible = false;
             pnlAdvanced.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             pnlAdvanced.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
@@ -281,16 +295,15 @@ namespace RobocopyGui
             });
             AddRow(pnlAdvanced, 0, "Subfolders:", cboSubfolders, 3);
 
-            numRetries = new NumericUpDown { Minimum = 0, Maximum = 1000000, Width = 80, Anchor = AnchorStyles.Left };
-            numWait = new NumericUpDown { Minimum = 0, Maximum = 100000, Width = 80, Anchor = AnchorStyles.Left };
+            numRetries = new NumericUpDown { Minimum = 0, Maximum = 1000000, Anchor = AnchorStyles.Left };
+            numWait = new NumericUpDown { Minimum = 0, Maximum = 100000, Anchor = AnchorStyles.Left };
             AddRow(pnlAdvanced, 1, "Retries (/R):", numRetries, 1);
             AddRow(pnlAdvanced, 1, "Wait seconds (/W):", numWait, 1, 2);
             toolTip.SetToolTip(numRetries, "Retries on failed copies. Robocopy's own default is 1,000,000.");
             toolTip.SetToolTip(numWait, "Seconds to wait between retries. Robocopy's own default is 30.");
 
-            // MinimumSize: an auto-sized TextBox would otherwise shrink to its (empty) preferred width.
-            txtCopyFlags = new TextBox { CharacterCasing = CharacterCasing.Upper, MinimumSize = new Size(80, 0), Anchor = AnchorStyles.Left };
-            txtDirCopyFlags = new TextBox { CharacterCasing = CharacterCasing.Upper, MinimumSize = new Size(80, 0), Anchor = AnchorStyles.Left };
+            txtCopyFlags = new TextBox { CharacterCasing = CharacterCasing.Upper, Anchor = AnchorStyles.Left };
+            txtDirCopyFlags = new TextBox { CharacterCasing = CharacterCasing.Upper, Anchor = AnchorStyles.Left };
             AddRow(pnlAdvanced, 2, "File copy (/COPY:):", txtCopyFlags, 1);
             AddRow(pnlAdvanced, 2, "Folder copy (/DCOPY:):", txtDirCopyFlags, 1, 2);
             toolTip.SetToolTip(txtCopyFlags, "D=Data A=Attributes T=Timestamps S=Security (ACLs) O=Owner U=Auditing X=skip alternate streams.\r\nRobocopy's default is DAT.");
@@ -304,7 +317,7 @@ namespace RobocopyGui
             AddCheckPair(pnlAdvanced, 4, chkNoFileList, chkNoDirList);
 
             txtLogDirectory = new TextBox { Anchor = AnchorStyles.Left | AnchorStyles.Right };
-            btnBrowseLog = new Button { Text = "…", AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, MinimumSize = new Size(30, 0), Anchor = AnchorStyles.Left };
+            btnBrowseLog = new Button { Text = "…", AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Anchor = AnchorStyles.Left };
             AddRow(pnlAdvanced, 5, "Execution log folder:", txtLogDirectory, 2);
             pnlAdvanced.Controls.Add(btnBrowseLog, 3, 5);
             toolTip.SetToolTip(txtLogDirectory, "Every run writes its own robocopy_<date>_<time>.log file here. Not part of the robocopy command.");
@@ -319,7 +332,6 @@ namespace RobocopyGui
             grpFilters.AutoSizeMode = AutoSizeMode.GrowAndShrink;
 
             var table = NewTable(2, Padding.Empty);
-            table.Dock = DockStyle.Fill;
             table.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
@@ -351,7 +363,6 @@ namespace RobocopyGui
             grpSchedule.AutoSizeMode = AutoSizeMode.GrowAndShrink;
 
             var table = NewTable(5, Padding.Empty);
-            table.Dock = DockStyle.Fill;
             for (int i = 0; i < 4; i++)
                 table.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
@@ -361,7 +372,7 @@ namespace RobocopyGui
             dtpStart = NewTimePicker();
             dtpStop = NewTimePicker();
             chkStart.Anchor = chkStop.Anchor = AnchorStyles.Left;
-            chkStop.Margin = new Padding(24, 3, 3, 3);
+            chkStop.Margin = Pad(8, 1, 1, 1);
             table.Controls.Add(chkStart, 0, 0);
             table.Controls.Add(dtpStart, 1, 0);
             table.Controls.Add(chkStop, 2, 0);
@@ -395,7 +406,6 @@ namespace RobocopyGui
             group.AutoSizeMode = AutoSizeMode.GrowAndShrink;
 
             var table = NewTable(2, Padding.Empty);
-            table.Dock = DockStyle.Fill;
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             table.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
 
@@ -406,10 +416,10 @@ namespace RobocopyGui
                 AcceptsReturn = false,
                 ScrollBars = ScrollBars.Vertical,
                 Font = new Font("Consolas", 10F),
-                Height = 62,
                 Dock = DockStyle.Fill,
                 MaxLength = 0,
             };
+            txtCommand.Height = Sizing.LinesHeight(txtCommand.Font, 3);
             table.Controls.Add(txtCommand, 0, 0);
             table.SetColumnSpan(txtCommand, 2);
 
@@ -430,18 +440,18 @@ namespace RobocopyGui
 
         private Control BuildActionBar()
         {
-            var table = NewTable(5, new Padding(3, 6, 3, 3));
-            table.Dock = DockStyle.Fill;
+            var table = NewTable(5, Pad(1, 2, 1, 1));
             table.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             table.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             table.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             table.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
 
+            // The run buttons get extra padding instead of a fixed size, so they stand out at any font size.
             btnImport = new Button { Text = "Import Settings…", AutoSize = true, Anchor = AnchorStyles.Left };
             btnExport = new Button { Text = "Export Settings…", AutoSize = true, Anchor = AnchorStyles.Left };
-            btnRunNow = new Button { Text = "Run now", AutoSize = true, MinimumSize = new Size(96, 32), Visible = false, Anchor = AnchorStyles.Right };
-            btnStart = new Button { Text = "Start", MinimumSize = new Size(120, 32), AutoSize = true, Font = new Font(Font, FontStyle.Bold), Anchor = AnchorStyles.Right };
+            btnRunNow = new Button { Text = "Run now", AutoSize = true, Padding = Pad(3, 1, 3, 1), Visible = false, Anchor = AnchorStyles.Right };
+            btnStart = new Button { Text = "Start", AutoSize = true, Padding = Pad(6, 1, 6, 1), Font = new Font(Font, FontStyle.Bold), Anchor = AnchorStyles.Right };
             table.Controls.Add(btnImport, 0, 0);
             table.Controls.Add(btnExport, 1, 0);
             table.Controls.Add(btnRunNow, 3, 0);
@@ -452,13 +462,12 @@ namespace RobocopyGui
 
         private Control BuildStatusPanel()
         {
-            var table = NewTable(1, new Padding(3, 0, 3, 6));
-            table.Dock = DockStyle.Fill;
+            var table = NewTable(1, Pad(1, 0, 1, 2));
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
-            lblStatus = new Label { AutoSize = true, Anchor = AnchorStyles.Left | AnchorStyles.Right, Font = new Font(Font.FontFamily, Font.Size * 1.1f, FontStyle.Bold), Margin = new Padding(3, 3, 3, 2) };
-            lblExitCode = new Label { AutoSize = true, Anchor = AnchorStyles.Left | AnchorStyles.Right, Margin = new Padding(3, 0, 3, 2) };
-            lblVerification = new Label { AutoSize = true, Anchor = AnchorStyles.Left | AnchorStyles.Right, Margin = new Padding(3, 0, 3, 2) };
+            lblStatus = new Label { AutoSize = true, Anchor = AnchorStyles.Left | AnchorStyles.Right, Font = new Font(Font.FontFamily, Font.Size * 1.1f, FontStyle.Bold), Margin = Pad(1, 1, 1, 1) };
+            lblExitCode = new Label { AutoSize = true, Anchor = AnchorStyles.Left | AnchorStyles.Right, Margin = Pad(1, 0, 1, 1) };
+            lblVerification = new Label { AutoSize = true, Anchor = AnchorStyles.Left | AnchorStyles.Right, Margin = Pad(1, 0, 1, 1) };
             table.Controls.Add(lblStatus, 0, 0);
             table.Controls.Add(lblExitCode, 0, 1);
             table.Controls.Add(lblVerification, 0, 2);
@@ -480,7 +489,7 @@ namespace RobocopyGui
             executionHeader.Controls.Add(BuildActionBar(), 0, 0);
             executionHeader.Controls.Add(BuildStatusPanel(), 0, 1);
 
-            var table = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, Padding = new Padding(8, 0, 8, 8) };
+            var table = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, Padding = Pad(3, 0, 3, 3) };
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             table.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
@@ -491,7 +500,8 @@ namespace RobocopyGui
 
         private Control BuildOutputPanel()
         {
-            var table = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 5, RowCount = 2, Margin = Padding.Empty };
+            // Auto-sized so its preferred height includes the output box's OutputLines.
+            var table = new TableLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, ColumnCount = 5, RowCount = 2, Margin = Padding.Empty };
             table.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             table.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
@@ -520,9 +530,15 @@ namespace RobocopyGui
         // Small factories
         // ------------------------------------------------------------------
 
-        private static GroupBox NewGroup(string text)
+        /// <summary>Margin or padding in font-relative spacing units (see <see cref="Sizing"/>).</summary>
+        private Padding Pad(int left, int top, int right, int bottom)
         {
-            return new GroupBox { Text = text, Padding = new Padding(8, 6, 8, 8), Margin = new Padding(3, 3, 3, 6) };
+            return Sizing.Pad(Font, left, top, right, bottom);
+        }
+
+        private GroupBox NewGroup(string text)
+        {
+            return new GroupBox { Text = text, Padding = Pad(3, 2, 3, 3), Margin = Pad(1, 1, 1, 2) };
         }
 
         private static TableLayoutPanel NewTable(int columns, Padding margin)
@@ -552,14 +568,13 @@ namespace RobocopyGui
                 Format = DateTimePickerFormat.Custom,
                 CustomFormat = "HH:mm",
                 ShowUpDown = true,
-                Width = 70,
                 Anchor = AnchorStyles.Left,
             };
         }
 
-        private static void AddRow(TableLayoutPanel table, int row, string caption, Control control, int span, int column = 0)
+        private void AddRow(TableLayoutPanel table, int row, string caption, Control control, int span, int column = 0)
         {
-            table.Controls.Add(new Label { Text = caption, AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(column == 0 ? 3 : 12, 3, 3, 3) }, column, row);
+            table.Controls.Add(new Label { Text = caption, AutoSize = true, Anchor = AnchorStyles.Left, Margin = Pad(column == 0 ? 1 : 4, 1, 1, 1) }, column, row);
             table.Controls.Add(control, column + 1, row);
             if (span > 1)
                 table.SetColumnSpan(control, span);

@@ -1,3 +1,4 @@
+using System;
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -14,7 +15,6 @@ namespace RobocopyGui.Ui
             using (var form = new Form())
             {
                 form.SuspendLayout();
-                form.AutoScaleDimensions = new SizeF(96F, 96F);
                 form.Text = title;
                 form.Font = SystemFonts.MessageBoxFont;
                 form.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -22,15 +22,18 @@ namespace RobocopyGui.Ui
                 form.MinimizeBox = false;
                 form.MaximizeBox = false;
                 form.ShowInTaskbar = false;
-                form.AutoScaleMode = AutoScaleMode.Dpi;
                 form.AutoSize = true;
                 form.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+
+                Font font = form.Font;
+                // Text wraps at roughly 60 characters of the dialog font.
+                var wrap = new Size(TextRenderer.MeasureText(new string('x', 60), font).Width, 0);
 
                 var layout = new TableLayoutPanel
                 {
                     AutoSize = true,
                     ColumnCount = 2,
-                    Padding = new Padding(16, 16, 16, 12),
+                    Padding = Sizing.Pad(font, 5, 5, 5, 4),
                     Dock = DockStyle.Fill,
                 };
                 layout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
@@ -40,7 +43,7 @@ namespace RobocopyGui.Ui
                 {
                     Image = SystemIcons.Warning.ToBitmap(),
                     SizeMode = PictureBoxSizeMode.AutoSize,
-                    Margin = new Padding(0, 0, 12, 0),
+                    Margin = Sizing.Pad(font, 0, 0, 4, 0),
                 };
                 layout.Controls.Add(icon, 0, 0);
                 layout.SetRowSpan(icon, 2);
@@ -49,26 +52,31 @@ namespace RobocopyGui.Ui
                 {
                     Text = heading,
                     AutoSize = true,
-                    Font = new Font(form.Font.FontFamily, form.Font.Size * 1.25f, FontStyle.Bold),
-                    Margin = new Padding(0, 0, 0, 8),
-                    MaximumSize = new Size(420, 0),
+                    Font = new Font(font.FontFamily, font.Size * 1.25f, FontStyle.Bold),
+                    Margin = Sizing.Pad(font, 0, 0, 0, 3),
+                    MaximumSize = wrap,
                 }, 1, 0);
                 layout.Controls.Add(new Label
                 {
                     Text = message,
                     AutoSize = true,
-                    MaximumSize = new Size(420, 0),
-                    Margin = new Padding(0, 0, 0, 16),
+                    MaximumSize = wrap,
+                    Margin = Sizing.Pad(font, 0, 0, 0, 5),
                 }, 1, 1);
 
-                var confirm = new Button { Text = confirmText, AutoSize = true, MinimumSize = new Size(88, 0), DialogResult = DialogResult.OK };
-                var cancel = new Button { Text = "Cancel", AutoSize = true, MinimumSize = new Size(88, 0), DialogResult = DialogResult.Cancel };
+                // Equal-width buttons, wide enough for either caption.
+                var confirm = new Button { Text = confirmText, AutoSize = true, Padding = Sizing.Pad(font, 2, 0, 2, 0), DialogResult = DialogResult.OK };
+                var cancel = new Button { Text = "Cancel", AutoSize = true, Padding = Sizing.Pad(font, 2, 0, 2, 0), DialogResult = DialogResult.Cancel };
+                form.Controls.Add(confirm);
+                form.Controls.Add(cancel);
+                var buttonSize = new Size(Math.Max(confirm.PreferredSize.Width, cancel.PreferredSize.Width), 0);
+                confirm.MinimumSize = cancel.MinimumSize = buttonSize;
                 var buttons = new FlowLayoutPanel
                 {
                     FlowDirection = FlowDirection.RightToLeft,
                     AutoSize = true,
                     Dock = DockStyle.Fill,
-                    Margin = new Padding(0),
+                    Margin = Padding.Empty,
                 };
                 buttons.Controls.Add(cancel);
                 buttons.Controls.Add(confirm);

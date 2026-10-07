@@ -48,6 +48,12 @@ namespace RobocopyGui
             outputTimer.Start();
         }
 
+        protected override void OnLoad(EventArgs e)
+        {
+            SizeToContent();
+            base.OnLoad(e); // centers the form, so it must see the final size
+        }
+
         protected override void OnShown(EventArgs e)
         {
             base.OnShown(e);
@@ -595,20 +601,43 @@ namespace RobocopyGui
             FitConfigPanel();
         }
 
-        /// <summary>Gives the configuration area the height it needs, leaving room for the output.</summary>
+        private void SizeToContent()
+        {
+            bool advanced = pnlAdvanced.Visible;
+            pnlAdvanced.Visible = true;
+            int configWidth = configTable.GetPreferredSize(Size.Empty).Width;
+            pnlAdvanced.Visible = advanced;
+            Size config = new Size(configWidth, configTable.GetPreferredSize(Size.Empty).Height);
+            Size execution = executionPanel.GetPreferredSize(Size.Empty);
+            int scrollBar = SystemInformation.VerticalScrollBarWidth;
+
+            MinimumSize = SizeFromClientSize(new Size(
+                execution.Width,
+                split.Panel1MinSize + split.SplitterWidth + execution.Height));
+
+            Size wanted = SizeFromClientSize(new Size(
+                Math.Max(config.Width + scrollBar, execution.Width),
+                config.Height + split.SplitterWidth + execution.Height));
+            Rectangle screen = Screen.FromControl(this).WorkingArea;
+            Size = new Size(Math.Min(wanted.Width, screen.Width), Math.Min(wanted.Height, screen.Height));
+        }
+
         private void FitConfigPanel()
         {
             configTable.PerformLayout();
-            int wanted = configTable.Height + 2;
-            int max = split.Height - split.SplitterWidth - executionHeader.Height - ScaleForDpi(150);
+            int wanted = configTable.Height;
+            int reserved = executionPanel.GetPreferredSize(Size.Empty).Height;
+            int missing = wanted - (split.Panel1.Height + split.Panel2.Height - reserved);
+            if (missing > 0 && WindowState == FormWindowState.Normal)
+            {
+                Rectangle screen = Screen.FromControl(this).WorkingArea;
+                int height = Math.Min(Height + missing, screen.Height);
+                Bounds = new Rectangle(Left, Math.Max(screen.Top, Math.Min(Top, screen.Bottom - height)), Width, height);
+            }
+
+            int max = split.Panel1.Height + split.Panel2.Height - reserved;
             if (max > split.Panel1MinSize)
                 split.SplitterDistance = Math.Max(split.Panel1MinSize, Math.Min(wanted, max));
-        }
-
-        private int ScaleForDpi(int pixelsAt96Dpi)
-        {
-            using (var graphics = CreateGraphics())
-                return (int)Math.Round(pixelsAt96Dpi * graphics.DpiY / 96.0);
         }
 
         protected override void OnResize(EventArgs e)
